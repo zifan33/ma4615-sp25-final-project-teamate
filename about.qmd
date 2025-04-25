@@ -1,0 +1,37 @@
+---
+title: "About"
+image: images/profile.jpg
+about:
+  template: jolla
+---
+
+
+This comes from the file `about.qmd`.
+
+This is a website for the final project for MA[46]15 Data Science with R by Team TEAMATE.
+
+The members of this team are below.
+
+### [Zifan Huang](https://www.linkedin.com/in/zifan-huang/)
+Zifan is a senior studying economics. Github: https://github.com/zifan33
+
+### Rheona Mehta
+Rheona is a junior studying Economics and Data Science. Github:  https://github.com/rhemehta
+
+### Catherine Liu
+Catherine is a junior studying computer science and mathematics. Github: https://github.com/catherinel04
+
+### Aron Diamond 
+Aron is a masters student studying Bioinformatics. Github: https://github.com/adiama0
+
+### Xiangfu Meng
+Xiangfu is a senior studying biology and statistics. Github:https://github.com/ollyllo
+
+## Acknowledgements
+ This is a course project for MA[46]15 Data Science with R at the Boston University. We thank Professor [Daniel Sussman](https://math.bu.edu/people/sussman/) and TF Aislinn Sullivan for their guidance and support throughout the course. We also thank our classmates for their feedback. The content and assessments for this course have been modified as part of Boston University’s Designing Antiracist Curricula Fellowship.
+
+<!-- Please leave in the information below -->
+
+### About this Template.
+
+This is based off of the standard Quarto website template from RStudio (2023.09.0 Build 463).

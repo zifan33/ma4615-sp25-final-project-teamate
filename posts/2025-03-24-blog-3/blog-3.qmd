@@ -1,0 +1,97 @@
+---
+title: "Blog 3: Extended Analysis and Equity Considerations"
+description:  |
+  Preliminary data exploration and explore the structure of the data.
+author: "TEAMATE"
+date: "2025-03-24"
+draft: FALSE
+---
+
+```{r}
+rm(list = ls())
+# hide warnings
+options(warn = -1)
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(stargazer))
+suppressPackageStartupMessages(library(readxl))
+
+data <- readRDS("dataset/cleaned_data.rds")
+census_data <- read_excel('dataset/NST-EST2024-POP.xlsx')
+```
+## Data Background and Context
+The dataset originates from the landmark study *"Systemic Discrimination Among Large U.S. Employers"* (Kline, Rose, and Walters, 2022). 
+
+- **Research Questions:** The study explores whether discrimination is endemic to particular firms, investigates firm-level heterogeneity in callback rates, and considers the potential impact of industry, geographic location, and other structural factors.
+
+The census data was retrieved from the United States Census Bureau at this link: https://www.census.gov/data/tables/time-series/demo/popest/2020s-state-total.html
+
+## Extended Exploratory Analysis and Equity Considerations
+
+In this update, I extend my analysis to delve deeper into the structure of the data and highlight important equity issues. By examining the distribution of submissions by state and comparing callback rates by race, the analysis aims to uncover potential systemic biases and inform further steps. 
+
+## Check distribution of submissions by state
+The following code creates a bar plot that orders states by the count of submissions. This visualization helps identify geographic patterns in the data, which may be related to regional hiring practices or other local factors.
+```{r}
+data %>%
+  count(state) %>%
+  arrange(desc(n)) %>% 
+  ggplot(aes(y = reorder(state, n), x = n)) +
+  geom_bar(stat = "identity", fill = "skyblue", color = "black") +
+  labs(
+    title = "Distribution of States (Ordered by Count)",
+    y = "State",
+    x = "Count"
+  )
+```
+
+## Check distribution of population by state
+The following code organizes data from the U.S. Census Bureau and creates a bar plot that orders states by their population in 2024. This visualization highlights the distribution of population density across states, providing a clear comparison to the research data. By aligning the population data with the research findings, the plot demonstrates a correlation between states with higher populations and the number of samples collected in those states. 
+
+```{r}
+colnames(census_data)[1] <- "states"
+
+census_data <- census_data %>% 
+  select(-2) %>% 
+  slice(-(1:3))
+
+colnames(census_data)[2:6] <- c("2020", "2021", "2022", "2023", "2024")
+
+census_data <- census_data %>% filter(grepl("^\\.", states))
+
+census_data <- census_data %>% 
+  filter(states != ".Puerto Rico") %>%
+  mutate(states = gsub("^\\.", "", states)) 
+
+census_data %>%
+  ggplot(aes(y = reorder(states, `2024`), x = `2024`)) +  # Use backticks for column names
+  geom_bar(stat = "identity", fill = "skyblue", color = "black") +
+  labs(
+    title = "Population Distribution by State (2024)",
+    y = "State",
+    x = "Population"
+  ) 
+
+```
+
+
+# Check Black and White Difference to Any Callback
+(Note: `race`, and `cb` are the variables of interest)
+
+In this section, I focus on evaluating the callback rates between Black and White applicants. The variable `cb` indicates whether an applicant received a callback (1 = Yes, 0 = No), and the regression analysis estimates the difference between the two groups using a logistic model. White applicants are set as the reference group.
+```{r}
+df <- data %>%
+  filter(race %in% c("Black", "White")) %>%
+  mutate(race = factor(race, levels = c("White", "Black")))
+
+model <- glm(cb ~ race, data = df, family = binomial(link = "logit"))
+
+
+stargazer(model, type = "text",
+          title = "Logit: Difference in Any Callback by Race",
+          dep.var.labels = "Any Callback (1 = Yes, 0 = No)",
+          covariate.labels = "Race (Black)",
+          digits = 3)
+```
+The logit regression shows that Black applicants have significantly lower odds of receiving a callback compared to White applicants, with a coefficient of -0.112 (p<0.01). The constant of -1.096 represents the baseline log-odds of receiving a callback for White applicants. The model, estimated on 83,643 observations, has a log-likelihood of -46,101.830. 

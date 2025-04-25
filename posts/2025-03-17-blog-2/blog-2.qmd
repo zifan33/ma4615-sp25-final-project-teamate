@@ -1,0 +1,51 @@
+---
+title: "Blog 2: Data Loading, Cleaning, and Diagnostic Plots"
+description:  |
+  This blog shows the background of our data and how we visualize it.
+author: "TEAMATE"
+date: "2025-03-17"
+draft: FALSE
+---
+
+## Data Background
+
+This project uses data from the study *"Systemic Discrimination Among Large U.S. Employers"* by Patrick Kline, Evan K. Rose, and Christopher Walters (2022). The study examines discrimination in hiring practices through a large-scale correspondence experiment. Key aspects of the study include:
+
+- **Objective:** To detect whether disparate treatment in hiring—particularly based on race, gender, and age—is concentrated within specific companies.
+- **Design:** A targeted randomized control trial where fictitious applications (varying by race, gender, and other resume characteristics) were submitted to over 100 Fortune 500 firms across multiple waves (including during the COVID pandemic).
+- **Scale:** Over 84,000 applications were sent, enabling both firm-level and industry-level analysis of callback rates.
+- **Context:** The data is used to measure systemic discrimination, a term defined by patterns or practices with a broad impact on an industry or geographic area, and to provide actionable intelligence for policy enforcement (e.g., EEOC investigations).
+
+This background provides important context on both the experimental design and the intended use of the data, highlighting potential challenges such as sample bias and variability across firms.
+
+In this post, I describe the initial steps for loading and cleaning the dataset. I begin by reading in the cleaned data from an RDS file. The dataset contains various variables, including `age_at_sub`, `month`, `year`, and `state`, which I will explore to understand data quality and identify potential issues. Below is some sample R code I developed to generate diagnostic plots. I create a histogram to visualize the distribution of submissions throughout the months, faceted by year. 
+
+```{r}
+rm(list = ls())
+# hide warnings
+options(warn = -1)
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(stargazer))
+data <- readRDS("dataset/cleaned_data.rds")
+```
+
+# Diagnostic Plots
+## Check distribution of submission month throughout years
+```{r}
+ggplot(data, aes(x = month)) +
+  geom_histogram(binwidth = 0.5, fill = "skyblue", color = "black") +  
+  scale_x_continuous(
+    breaks = 1:12,
+    labels = month.abb
+  ) +
+  labs(
+    title = "Distribution of Months",
+    x = "Month",
+    y = "Count"
+  ) +
+  theme(axis.text.x = element_text(angle = 45)) +
+  facet_grid(~year)
+```
+This plot shows  sparse activity in early 2019, with submissions only appearing in a couple of months. In 2020, there is a notable increase, particularly in the latter half of the year. The highest volume of submissions occurs in early 2021, creating a distinct peak in the data. Overall, the distribution suggests that most of the data collection took place from late 2020 into the first months of 2021.

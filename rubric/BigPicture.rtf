@@ -1,0 +1,61 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2761
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fnil\fcharset0 .SFNS-Regular_wdth_opsz13CCC6_GRAD_wght2580000;}
+{\colortbl;\red255\green255\blue255;\red39\green44\blue49;\red255\green255\blue255;}
+{\*\expandedcolortbl;;\cssrgb\c20392\c22745\c25098;\cssrgb\c100000\c100000\c100000;}
+\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\deftab720
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f0\b\fs39\fsmilli19800 \cf2 \cb3 \expnd0\expndtw0\kerning0
+\
+To get the shinylive-r working.\
+\
+1.  Make sure your shiny app works as a regular r chunk.\
+2.  Make sure that the chunk is completely self-contained. Meaning all packages and data are loaded inside that chunk. It can't rely on any other chunks.\
+3.  For the data that you are using for shiny, copy the rds file or any other files into the scripts folder, and then publish your website.\
+4.  Where you load in your data, change it to use a URL to the data set which will now be on your website. Something like read_rds("https://sussmanbu.github.io/ma-4615-fa24-final-project-group-a/scripts/dataset_for_shiny.rds")\
+5.  Check that the chunk still works as a regular r chunk.\
+6.  Change it to a shinylive-r chunk.\
+7.  Commit and publish your work.\
+\
+I recommend keeping the data used for the shiny interactive relatively small, though this isn't completely necessary.\
+\
+------------------------------------------------------------------------\
+\
+## Rubric: On this page\
+\
+-   Title\
+    -   Your big picture page should have a creative/click-bait-y title/headline that provides a hint about your thesis.\
+-   Clarity of Explanation\
+    -   You should have a clear thesis/goal for this page. What are you trying to show? Make sure that you explain your analysis in detail but don't go into top much mathematics or statistics. The audience for this page is the general public (to the extent possible). Your thesis should be a statement, not a question.\
+    -   Each figure should be very polished and also not too complicated. There should be a clear interpretation of the figure so the figure has a clear purpose. Even something like a histogram can be difficult to interpret for non-experts.\
+-   Creativity\
+    -   Do your best to make things interesting. Think of a how a news article or a magazine story might draw you in. Think of how each part of your analysis supports the previous part or provides a different perspective.\
+-   Interactive component\
+    -   Quality and ease of use of the interactive components. Is it clear what can be explored using your interactive components? Does it enhance and reinforce your conclusions?\
+-   This page should be self-contained.\
+\
+**Note**: This page should have no code visible, i.e. use `#| echo: FALSE`.\
+\
+## Rubric: Other components\
+\
+### Video Recording\
+\
+Make a video recording (probably using Zoom) demonstrating your interactive components.\
+You should provide a quick explanation of your data and demonstrate some of the conclusions from your EDA.\
+This video should be no longer than 4 minutes.\
+Include a link to your video (and password if needed) in your README.md file on your Github repository.\
+You are not required to provide a link on the website.\
+This can be presented by any subset of the team members.\
+\
+### Rest of the Site\
+\
+Finally, here are important things to keep in mind for the rest of the site.\
+\
+The main title of your page is informative.\
+Each post has an author/description/informative title.\
+All lab required posts are present.\
+Each page (including the home page) has a nice featured image associated with it.\
+Your about page is up to date and clean.\
+You have removed the generic posts from the initial site template.\
+}

@@ -1,0 +1,483 @@
+---
+title: Analysis
+description: Here we provide a detailed analysis using more sophisticated statistics techniques.
+toc: true
+draft: false
+---
+
+![](images/labor-market-information.png)
+
+This comes from the file `analysis.qmd`.
+
+
+Code Reference: 
+
+-   [Systemic Discrimination Among Large U.S. Employers](https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/HLO4XC)
+-   [R Markdown: The Definitive Guide](https://bookdown.org/yihui/rmarkdown/)
+-   [R for Data Science](https://r4ds.had.co.nz/)
+-   [R Markdown Cookbook](https://bookdown.org/yihui/rmarkdown-cookbook/)
+-   [R Markdown Reference Guide](https://rmarkdown.rstudio.com/lesson-13.html)
+-   [R Markdown Cheat Sheet](https://rstudio.com/wp-content/uploads/2015/02/rmarkdown-cheatsheet.pdf)
+-   [gtsummary Package](https://www.danieldsjoberg.com/gtsummary/)
+
+
+## Loading data
+
+```{r}
+rm(list = ls())
+# hide warnings
+options(warn = -1)
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(stargazer))
+suppressPackageStartupMessages(library(readxl))
+suppressPackageStartupMessages(library(fixest))
+suppressPackageStartupMessages(library(usmap))
+suppressPackageStartupMessages(library(lfe))    
+suppressPackageStartupMessages(library(lmtest))
+suppressPackageStartupMessages(library(sandwich)) 
+suppressPackageStartupMessages(library(multiwayvcov))
+suppressPackageStartupMessages(library(here))
+suppressPackageStartupMessages(library(gtsummary))
+suppressPackageStartupMessages(library(htmltools))
+suppressPackageStartupMessages(library(broom))
+suppressPackageStartupMessages(library(stringr))
+
+data <- readRDS(here::here("dataset/cleaned_data.rds"))
+```
+
+
+## Motivation
+
+Despite decades of regulatory and legal efforts to eliminate hiring discrimination, numerous field experiments continue to document persistent gaps in employer callback rates by race. In the study by [Rose et al. (2022)](https://ekrose.github.io/files/randres.pdf), the large-scale fake resume experiment among Fortune 500 firms in the US enables us to investigate the extent of taste-based discrimination in hiring practices. 
+
+In a nutshell, the study sends fake resumes with randomly assigned characteristics to entry-level positions among large U.S. employers.  This is an example of how a sample of resumes looks like:
+![](images/example-resume.png)
+
+> **Note:** sourced from Figure A1: Examples of applicant resumes in the Rose et al. (2022) paper.
+
+
+
+## Research Questions
+
+There is a famous saying:
+
+> Correlation does not imply causation.
+
+This is especially true when it comes to the dialogue of racial disparity from a data-driven point of view. In the previous correlation-based analysis, the discrimination gap may have been misspecified due to omitted variable bias (OVB). For instance, instead of taste-based discrimination, labor market outcome inequality may be driven by different levels of educational attainment, work experience, or other factors that are not controlled for. 
+
+This analysis leverages the powerful experimental data and codes from the Rose et al. (2022) paper to estimate the causal impact of being Black on the probability of receiving a callback.
+
+The analysis is based on the following research questions:
+
+1. **Does tasted-based discrimination cause differential labor market outcomes in the U.S?** 
+
+- If so, how large is the magnitude?
+
+2. **Is there evidence of intersectional heterogeneity—that is, does the magnitude of the Black callback penalty vary by another trait?**  
+- If so, how large is the magnitude?
+
+3. **Do firm‑ or month‑level shocks attenuate or amplify measured discrimination?**  
+
+
+
+## Summary Statistics
+```{r, echo=FALSE}
+data2 <- data %>%
+  filter(balanced >= 0) %>% 
+  mutate(
+    balanced_group = if_else(balanced >= 1, "Balanced", "All Firms"),
+    race = if_else(black == 1, "Black", "White"),
+    subgroup = paste(balanced_group, race, sep = " - ")
+  )
+
+tbl <- data2 %>%
+  tbl_summary(
+    by = subgroup,                  
+    include = c(cb, call_cb, email_cb, text_cb),  # select variables to summarize
+    missing = "ifany",                  # do not list missing data separately
+    statistic = list(all_continuous() ~ "{n} / {mean} / {sd} / {median}/ {p25}/ {p75}"),
+  ) %>% 
+  modify_header(
+    label = "**Variable**",
+    stat_by = "**N / Mean / SD**"
+  ) 
+
+tbl
+```
+
+The first panel (“All Firms”) shows that Black applicants receive any form of contact in 22 percent of applications versus 23 percent for White applicants—a modest raw gap.  When we restrict to the “Balanced” sample, the disparity widens: 23 percent versus 26 percent.  Similar patterns hold for voicemails (17% vs 19%) and email/text contacts.  These descriptive gaps motivate our causal estimation below and suggest that, even with the same pool of job postings, Black applicants face lower call‑back rates across multiple channels.
+
+
+## Descriptive Evidence by Applicants First Name 
+```{r, echo=FALSE}
+df <- data
+ols <- felm(cb ~ black + white - 1|0|0|job_id, data = df)
+ols2 <- felm(cb ~ factor(firstname) - 1|0|0|job_id, data = df)
+coef <- as.data.frame(summary(ols2)$coefficients)
+coef <- coef %>% rownames_to_column(var='coef') %>%
+  extract(coef, "firstname", "\\(firstname\\)([A-Za-z]+)", remove=TRUE)
+coef <- df %>% select(race,gender,firstname) %>% distinct %>%
+  right_join(coef, by='firstname') %>% arrange(race,gender,firstname) %>%
+  mutate(order=row_number())
+coef[,1:3]<- lapply(coef[, 1:3], as.factor)
+
+coef <- coef %>% mutate("Race and gender"=case_when(
+      race == "Black" & gender == "Female" ~ "Black, female",
+      race == "Black" & gender == "Male" ~ "Black, male",
+      race == "White" & gender == "Female" ~ "White, female",
+      race == "White" & gender == "Male" ~ "White, male"))
+
+plot_A3 <- ggplot(data = coef, 
+       aes(x = reorder(factor(firstname), order), y = Estimate, fill = `Race and gender`)) +
+  geom_bar(stat = 'identity', alpha = .3) + 
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) + 
+  labs(
+    x = "Applicant first name",
+    y = "Mean 30-day callback rate",
+    fill = "Race and gender"
+  ) +
+  geom_segment(aes(x = 1, y = coef(ols)['black'], xend = 38, yend = coef(ols)['black']),
+               show.legend = FALSE, color = "#F8766D") +
+  geom_segment(aes(x = 39, y = coef(ols)['white'], xend = 76, yend = coef(ols)['white']),
+               show.legend = FALSE, color = "#00BFCF")
+
+print(plot_A3, height = 5, width = 8)
+
+```
+This figure shows mean contact rates by applicant first name, organized by race and gender group. The horizontal bars show race group mean contact rates. We can see that, on average, black names receive fewer 30-day callbacks than white names.
+
+
+## Effect of Taste-Based Discrimination on Contact Rates
+
+Due to the nature of experimental data, we can estimate the causal effect of large employers' taste-based discrimination on applicant labor market outcomes.
+
+### Model Specification
+
+The code estimates the causal effect of being Black on the probability of receiving a callback, controlling for a vector of other resume characteristics. Formally, two specifications:
+
+
+1. **Linear probability model (OLS):**
+
+- with controls for all sample
+- with controls for a balanced sample
+- two-way fixed effects for all sample
+- two-way fixed effects for a balanced sample
+
+2. **Logistic regression**
+
+- with controls for all sample
+- with controls for a balanced sample
+
+
+```{r, echo=FALSE}
+data <- data %>%
+  mutate(
+    submitted_date = as.Date(submitted_date) 
+  ) %>%
+  mutate(
+    first_day_month = floor_date(submitted_date, unit = "month")
+  ) %>%
+  mutate(
+    wday_first = wday(first_day_month, week_start = 1),
+    Monday_of_month = first_day_month + days((8 - wday_first) %% 7)
+  ) %>%
+  arrange(submitted_date) %>%
+  mutate(
+    num_month = dense_rank(Monday_of_month)
+  ) %>%
+  select(-first_day_month, -wday_first)
+
+
+
+
+data_all <- data %>% filter(balanced >= 0) %>%
+  mutate(wave = factor(wave),
+         region4 = factor(region4))
+data_bal <- data %>% filter(balanced >= 1) %>%
+  mutate(wave = factor(wave),
+         region4 = factor(region4))
+
+
+reg_formula <- as.formula("cb ~ black + female + over40 + political_club + academic_club + 
+                           lgbtq_club + same_gender_pronouns + gender_neutral_pronouns + 
+                           associates + wave + region4")
+
+# Linear Probability Model (LPM)
+fit_lpm_all <- lm(reg_formula, data = data_all)
+# Clustered standard errors by job_id
+cl_vcov_all <- cluster.vcov(fit_lpm_all, data_all$job_id)
+lpm_all_coefs <- coeftest(fit_lpm_all, vcov = cl_vcov_all)
+
+# (Two way LPM) for all sample
+fit_lpm_all_lm_fe <- lm(
+  cb ~ black + factor(firm_id) + factor(num_month)
+  , data = data_all
+)
+cl_vcov_fe_all <- cluster.vcov(fit_lpm_all_lm_fe, data_all$job_id)
+lpm_all_fe_coefs <- coeftest(fit_lpm_all_lm_fe, vcov = cl_vcov_fe_all)
+
+# Logit Model for all firms
+fit_logit_all <- glm(reg_formula, data = data_all, family = binomial(link = "logit"))
+cl_vcov_logit_all <- cluster.vcov(fit_logit_all, data_all$job_id)
+logit_all_coefs <- coeftest(fit_logit_all, vcov = cl_vcov_logit_all)
+
+#print(lpm_all_coefs)
+#print(logit_all_coefs)
+
+```
+
+```{r, echo=FALSE}
+# (LPM) for balanced sample
+fit_lpm_bal <- lm(reg_formula, data = data_bal)
+cl_vcov_bal <- cluster.vcov(fit_lpm_bal, data_bal$job_id)
+lpm_bal_coefs <- coeftest(fit_lpm_bal, vcov = cl_vcov_bal)
+
+# (Two way LPM) for balanced sample
+fit_lpm_bal_lm_fe <- lm(
+  cb ~ black + factor(firm_id) + factor(num_month)
+  , data = data_bal
+)
+cl_vcov_fe_bal <- cluster.vcov(fit_lpm_bal_lm_fe, data_bal$job_id)
+lpm_bal_fe_coefs <- coeftest(fit_lpm_bal_lm_fe, vcov = cl_vcov_fe_bal)
+
+
+
+# Logit Model for balanced sample
+fit_logit_bal <- glm(reg_formula, data = data_bal, family = binomial(link = "logit"))
+cl_vcov_logit_bal <- cluster.vcov(fit_logit_bal, data_bal$job_id)
+logit_bal_coefs <- coeftest(fit_logit_bal, vcov = cl_vcov_logit_bal)
+
+#print(lpm_bal_coefs)
+#print(logit_bal_coefs)
+```
+
+```{r, include=FALSE, echo=FALSE}
+models <- list(
+  fit_lpm_all,        # simple LPM, All
+  fit_lpm_all_lm_fe,  # LPM + firm & month FE, All
+  fit_logit_all,      # Logit, All
+  fit_lpm_bal,        # LPM, Balanced
+  fit_lpm_bal_lm_fe,  # LPM + FE, Balanced
+  fit_logit_bal       # Logit, Balanced
+)
+
+suppressWarnings(suppressMessages(
+  stargazer(
+    models,
+    #title            = "Effect of Being Black on Callback Rates",
+    type             = "html",
+    out              = here::here("output/ols_logit_results.html"),
+    model.names      = TRUE,               
+    column.separate  = c(3, 3),               
+    dep.var.labels   = "Call Back Prob.",
+    keep             = c(
+      "black", "female", "over40",
+      "political_club","academic_club","lgbtq_club",
+      "same_gender_pronouns","gender_neutral_pronouns","associates"
+    ),                                      
+    covariate.labels = c(
+      "Black", "Female", "Over 40", "Political club",
+      "Academic club", "LGBTQ club", "Same‑gender pronouns",
+      "Gender‑neutral pronouns", "Associate degree"
+    ),
+    omit.stat        = c("LL","ser", "aic"), 
+    add.lines        = list(
+      c("Sample", "All Firms", "All Firms", "All Firms", "Balanced", "Balanced", "Balanced"),
+      c("Firm FE",   "No", "Yes", "No",  "No", "Yes", "No"),
+      c("Month FE",  "No", "Yes", "No",  "No", "Yes", "No")
+    ),
+    star.cutoffs     = c(0.10, 0.05, 0.01),
+    notes            = "Clustered SEs by job_id"
+  )
+))
+```
+
+```{r, echo=FALSE, results='asis'}
+htmltools::includeHTML("output/ols_logit_results.html")
+```
+
+Across all specifications, the coefficient on Black is consistently negative and highly significant.  In the simplest linear probability model (column 1), being Black reduces the probability of any callback by about 2.1 percentage points (SE=0.3pp).  When we add firm and month fixed effects (column 2), the gap narrows only slightly to 2.0 pp, indicating that sorting of Black resumes into “easier” or “tougher” firms/months accounts for very little of the raw disparity.  In the balanced‐sample OLS (column 5), the Black penalty is essentially unchanged at 2.2 pp.  The corresponding logistic regressions (columns 3 and 6) imply a roughly 11–12 percent reduction in the odds of callback for Black applicants, again robust to fixed effects and sample restrictions.
+
+Among the other resume traits, Over 40 exhibits a modest negative effect in the unrestricted sample (–0.6 pp) but loses significance in the balanced sample.  Gender itself (Female) has no discernible callback penalty or bonus.  Signals like political, academic, or LGBTQ club affiliations never reach conventional significance, nor does holding an associate degree.  Interestingly, the use of same‑gender pronouns on the résumé is associated with a small but borderline significant callback penalty in the basic models (–1.4 pp), and the neutral‑pronoun penalty becomes significant in the balanced OLS (–1.7 pp).  This hints that nontraditional pronoun signaling may carry a slight cost in this context, though the effect sizes are small relative to the race gap.
+
+The model fit remains modest: R² climbs from just 2.4 percent without fixed effects to about 15 percent once we absorb firm‐and‐month variation, underscoring that much of the callback decision is driven by idiosyncratic job‐level factors and unobserved employer preferences.  All standard errors are clustered at the job level, and the F‑statistics confirm the joint significance of the regressors.
+
+*Key takeaway* : Even after controlling for a broad vector of resume characteristics and accounting for firm/month heterogeneity, Black applicants face a persistent 2pp lower callback rate—roughly a 12 percent relative penalty—highlighting taste‑based discrimination in large‑firm hiring.
+
+### Visualization of OLS Estimates
+```{r, echo=FALSE}
+term_labels <- c(
+  black                   = "Black",
+  female                  = "Female",
+  over40                  = "Over 40",
+  gender_neutral_pronouns = "Gender Neutral pronouns",
+  associates              = "Associate degree",
+  lgbtq_club              = "LGBTQ club",
+  political_club          = "Political club",
+  academic_club           = "Academic club"
+)
+
+models_lpm <- list(
+  All      = fit_lpm_all,
+  Balanced = fit_lpm_bal
+)
+
+coef_df_lpm <- bind_rows(
+  lapply(names(models_lpm), function(sample) {
+    broom::tidy(models_lpm[[sample]]) %>%
+      filter(term %in% names(term_labels)) %>%
+      mutate(
+        lower_ci = estimate - 1.96 * std.error,
+        upper_ci = estimate + 1.96 * std.error,
+        sample   = sample
+      ) %>%
+      select(term, estimate, lower_ci, upper_ci, sample)
+  })
+)
+
+coef_df_lpm <- coef_df_lpm %>%
+  mutate(
+    term = factor(term,
+                  levels = names(term_labels),
+                  labels = term_labels)
+  )
+
+ggplot(coef_df_lpm, aes(x = term, y = estimate, color = sample, shape = sample)) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray60") +
+  geom_point(position = position_dodge(width = 0.7), size = 3) +
+  geom_errorbar(aes(ymin = lower_ci, ymax = upper_ci),
+                position = position_dodge(width = 0.7),
+                width = 0.2) +
+  labs(
+    #title = "LPM (OLS) Coefficients for Key Resume Traits (95% CI)",
+    x        = NULL,
+    y        = "Coefficient Estimate",
+    color    = "Sample",
+    shape    = "Sample"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "top"
+  )
+```
+We can observe that the coefficient estimates for the Black variable are negative and significant across all samples since the 95% confidence intervals do not include 0. Also, gender-neutral pronoun estimates are significant in the balanced sample.
+
+
+## Heterogeneity Analysis 
+
+In this section, we use **interaction terms** to explore how the effect of being Black on labor market outcomes varies across different characteristics of the resumes.
+
+```{r echo=FALSE}
+vars <- c(
+  "female",
+  "over40",
+  "political_club",
+  "academic_club",
+  "lgbtq_club",
+  "same_gender_pronouns",
+  "gender_neutral_pronouns",
+  "associates"
+)
+
+
+full_formula <- as.formula(
+  paste0(
+    "cb ~ ",
+    paste0("black:", vars, collapse = " + "),
+    " + wave + region4"
+  )
+)
+
+get_coef_df <- function(data, sample_name) {
+  fit  <- lm(full_formula, data = data)
+  vcov <- cluster.vcov(fit, data$job_id)
+  broom::tidy(fit, vcov = vcov, conf.int = TRUE) %>%
+    filter(str_detect(term, "^black:")) %>%
+    mutate(
+      sample = sample_name,
+      pretty_term = recode(
+        term,
+        "black:female"                  = "Black × Female",
+        "black:over40"                  = "Black × Over 40",
+        "black:political_club"          = "Black × Political club",
+        "black:academic_club"           = "Black × Academic club",
+        "black:lgbtq_club"              = "Black × LGBTQ club",
+        "black:same_gender_pronouns"    = "Black × Same Gender Pronouns",
+        "black:gender_neutral_pronouns" = "Black × Gender Neutral Pronouns",
+        "black:associates"              = "Black × Associate degree"
+      )
+    )
+}
+
+
+coef_all  <- get_coef_df(data_all,  "All")
+coef_bal  <- get_coef_df(data_bal,  "Balanced")
+
+
+coef_both <- bind_rows(coef_all, coef_bal) %>%
+  mutate(
+    pretty_term = factor(
+      pretty_term,
+      levels = c(
+        "Black × Female",
+        "Black × Over 40",
+        "Black × Political club",
+        "Black × Academic club",
+        "Black × LGBTQ club",
+        "Black × Same Gender Pronouns",
+        "Black × Gender Neutral Pronouns",
+        "Black × Associate degree"
+      )
+    )
+  )
+
+
+ggplot(coef_both, aes(x = pretty_term, y = estimate, color = sample, shape = sample)) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray60") +
+  geom_point(position = position_dodge(width = 0.7), size = 3) +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high),
+                position = position_dodge(width = 0.7),
+                width = 0.2) +
+  labs(
+    #title    = "LPM (OLS) Heterogenous Treatment Effect Estimates (95% CI)",
+    x        = NULL,
+    y        = "Estimated Interaction",
+    color    = "Sample",
+    shape    = "Sample"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    axis.text.x   = element_text(angle = 45, hjust = 1),
+    plot.subtitle = element_text(face = "italic", size = 11),
+    legend.position = "top"
+  )
+
+```
+
+Although we don't find a significant gender penalty in the baseline model, the black-female interaction remains significant across sample restrictions, indicating that Black women experience an extra callback penalty beyond what the additive race and gender effects predict. 
+
+The interaction term between Black and gender‑neutral pronouns is also significant in the balanced sample. In other words, Black applicants who include gender‑neutral pronouns on their résumé face an additional callback penalty. 
+
+## Conclusion
+
+This analysis leverages a large-scale résumé audit experiment to estimate the causal effect of race on callback rates at Fortune 500 firms. Across all linear probability and logit specifications—both unrestricted and balanced samples—being Black reduces the probability of any form of contact by roughly **2 percentage points** (≈ 11–12 percent relative penalty), a gap that remains unchanged once we absorb firm and month fixed effects.  
+
+Pronoun usage carries a small penalty, and in the balanced sample the **Black × Gender‑Neutral Pronouns** and **Black × Female** interaction are also significant, indicating an extra penalty for Black applicants who signal intersecionality.
+
+---
+
+### Limitations
+
+- **External validity:** Firms in the Fortune 500 may not reflect smaller or mid‑sized employers’ behavior.  The generalizability of these results to other sectors or regions is uncertain.  Future work could extend this analysis to a broader set of firms, including smaller employers or those in different industries.
+
+- **Additional outcome:** Social capital and social networks are important in the hiring process.  Future work could explore how race affect social capital accumulation and its impact on hiring outcomes.  For example, do Black applicants have fewer connections to employees at the firms they apply to?  Do they receive fewer referrals or recommendations from friends or family members? 
+  - A new study using LinkedIn: [LinkedOut? A Field Experiment on Discrimination in Job Network Formation](https://academic.oup.com/qje/article-abstract/140/1/283/7842027?redirectedFrom=fulltext)
+
+- **More racial variation:** Since this study only covers black-white differences, it would be interesting to see how other racial groups are affected.  For example, do Asian applicants face similar or different discrimination patterns compared to Black applicants?  Do Hispanic applicants experience different callback rates based on their names or other characteristics?
+
+
+------------------------------------------------------------------------

@@ -1,0 +1,19 @@
+---
+title: "MA [46]15 Final Project"
+listing:
+  contents: "posts/*/*.qmd"
+  sort: "date desc"
+  type: default
+  categories: true
+  sort-ui: false
+  filter-ui: false
+page-layout: full
+title-block-banner: true
+---
+![](images/discrimination.png)
+
+>All else being equal, will a job applicant with a black-sounding name receive fewer callbacks than a job applicant with a white-sounding name? We leverage a large correspondence experiment dataset to answer this question. 
+
+
+
+This comes from the `index.qmd` file; Blog codes are in the `posts` directory.

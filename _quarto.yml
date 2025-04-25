@@ -1,0 +1,26 @@
+publish:
+  gh-pages:
+    repo: zifan33/ma4615-sp25-final-project-teamate
+    branch: gh-pages
+    auth: auto
+
+project:
+  type: website
+  execute-dir: project
+  resources: [ scripts, dataset_for_shiny ]
+
+website:
+  title: "MA [46]15 Final Project"
+  site-url: "https://zifan33.github.io/ma4615-sp25-final-project-teamate"
+  repo-url: "https://github.com/zifan33/ma4615-sp25-final-project-teamate"
+  navbar:
+    right:
+      - about.qmd
+      - big_picture.qmd
+      - analysis.qmd
+      - data.qmd
+
+format:
+  html:
+    theme: cosmo
+    css: styles.css

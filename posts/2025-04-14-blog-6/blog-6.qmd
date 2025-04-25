@@ -1,0 +1,219 @@
+---
+title: "Blog 6: Wrapping Up the Analysis"
+description:  |
+  Wrapping up original analysis in the paper.
+author: "TEAMATE"
+date: "2025-04-016"
+draft: FALSE
+---
+
+This post replicates the table 1 and 2 in the paper in R.
+
+Note: Experiment data is from 2019-2021, while census data is from 2019-2024. The following code aggregate application level data to the **state** level and merge it with the census data to calculate the proportion of applications by state.
+
+This exercise will help us understand the background of the data on a state-by-state basis and explore the relationship between callback rates and other variables at the state level.
+
+```{r}
+rm(list = ls())
+# hide warnings
+options(warn = -1)
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(stargazer))
+suppressPackageStartupMessages(library(readxl))
+suppressPackageStartupMessages(library(fixest))
+suppressPackageStartupMessages(library(usmap))
+suppressPackageStartupMessages(library(lfe))    
+suppressPackageStartupMessages(library(lmtest))
+suppressPackageStartupMessages(library(sandwich)) 
+suppressPackageStartupMessages(library(multiwayvcov))
+
+
+data <- readRDS("dataset/cleaned_data.rds")
+```
+
+## Data Background and Context
+
+The dataset originates from the landmark study *"Systemic Discrimination Among Large U.S. Employers"* (Kline, Rose, and Walters, 2022).
+
+-   **Research Questions:** The study explores whether discrimination is endemic to particular firms, investigates firm-level heterogeneity in callback rates, and considers the potential impact of industry, geographic location, and other structural factors.
+
+The census data was retrieved from the United States Census Bureau at this link: https://www.census.gov/data/tables/time-series/demo/popest/2020s-state-total.html
+
+```{r}
+for(k in 1:4) {
+  data[[paste0("region4_", k)]] <- as.integer(data$region4 == k)
+}
+
+for(k in 1:5) {
+  data[[paste0("wave", k)]] <- as.integer(data$wave == k)
+}
+```
+
+# Table 1: Summary Statistics
+```{r}
+vars <- c("female", "over40", "lgbtq_club", "academic_club", "political_club",
+          "gender_neutral_pronouns", "same_gender_pronouns", "associates",
+          "region4_1", "region4_2", "region4_3", "region4_4",
+          "wave1", "wave2", "wave3", "wave4", "wave5",
+          "cb", "call_cb", "email_cb", "text_cb", "any_cb_0_14", "any_cb_15_30")
+
+data <- data %>%
+  mutate(balanced_group = if_else(balanced >= 1, "Balanced", "All Firms"),
+         race = if_else(black == 1, "Black", "White"))
+
+summary_table <- data %>%
+  filter(balanced >= 0) %>%   
+  group_by(balanced_group, race) %>%
+  summarise(across(all_of(vars),
+                   list(mean = ~mean(. , na.rm = TRUE),
+                        sd = ~sd(., na.rm = TRUE),
+                        n  = ~sum(!is.na(.))),
+                   .names = "{col}_{fn}"),
+            .groups = "drop")
+
+summary_table
+```
+
+# Table 2: Effect of Resume Characteristics on Contact Rates
+```{r}
+data_all <- data %>% filter(balanced >= 0) %>%
+  mutate(wave = factor(wave),
+         region4 = factor(region4))
+data_bal <- data %>% filter(balanced >= 1) %>%
+  mutate(wave = factor(wave),
+         region4 = factor(region4))
+
+
+reg_formula <- as.formula("cb ~ black + female + over40 + political_club + academic_club + 
+                           lgbtq_club + same_gender_pronouns + gender_neutral_pronouns + 
+                           associates + wave + region4")
+
+# Linear Probability Model (LPM)
+fit_lpm_all <- lm(reg_formula, data = data_all)
+# Clustered standard errors by job_id
+cl_vcov_all <- cluster.vcov(fit_lpm_all, data_all$job_id)
+lpm_all_coefs <- coeftest(fit_lpm_all, vcov = cl_vcov_all)
+
+# Logit Model for all firms
+fit_logit_all <- glm(reg_formula, data = data_all, family = binomial(link = "logit"))
+cl_vcov_logit_all <- cluster.vcov(fit_logit_all, data_all$job_id)
+logit_all_coefs <- coeftest(fit_logit_all, vcov = cl_vcov_logit_all)
+
+#print(lpm_all_coefs)
+#print(logit_all_coefs)
+
+```
+
+```{r}
+# (LPM) for balanced sample
+fit_lpm_bal <- lm(reg_formula, data = data_bal)
+cl_vcov_bal <- cluster.vcov(fit_lpm_bal, data_bal$job_id)
+lpm_bal_coefs <- coeftest(fit_lpm_bal, vcov = cl_vcov_bal)
+
+# Logit Model for balanced sample
+fit_logit_bal <- glm(reg_formula, data = data_bal, family = binomial(link = "logit"))
+cl_vcov_logit_bal <- cluster.vcov(fit_logit_bal, data_bal$job_id)
+logit_bal_coefs <- coeftest(fit_logit_bal, vcov = cl_vcov_logit_bal)
+
+#print(lpm_bal_coefs)
+#print(logit_bal_coefs)
+```
+
+```{r}
+stargazer(fit_lpm_all, fit_logit_all, fit_lpm_bal, fit_logit_bal,
+          se = list(sqrt(diag(cl_vcov_all)),
+                    sqrt(diag(cl_vcov_logit_all)),
+                    sqrt(diag(cl_vcov_bal)),
+                    sqrt(diag(cl_vcov_logit_bal))),
+          #column.labels = c("LPM", "Logit", "LPM", "Logit"),
+          dep.var.labels = "Call Back Prob.",
+          covariate.labels = c("Black", "Female", "Over 40", "Political club",
+                               "Academic club", "LGBTQ club", "Same-gender pronouns",
+                               "Gender-neutral pronouns", "Associate degree",
+                               "Wave 2", "Wave 3", "Wave 4", "Wave 5",
+                               "Midwest", "South", "West"),
+         #omit = "wave|region4", 
+        #omit.labels = c("Wave 1", "Northeast"),
+          star.cutoffs = c(0.10, 0.05, 0.01),
+          notes = "Clustered standard errors by Job ID",
+          type = "text")
+```
+
+# Figure: Callbacks by applicant first name
+```{r}
+df <- data
+ols <- felm(cb ~ black + white - 1|0|0|job_id, data = df)
+ols2 <- felm(cb ~ factor(firstname) - 1|0|0|job_id, data = df)
+coef <- as.data.frame(summary(ols2)$coefficients)
+coef <- coef %>% rownames_to_column(var='coef') %>%
+  extract(coef, "firstname", "\\(firstname\\)([A-Za-z]+)", remove=TRUE)
+coef <- df %>% select(race,gender,firstname) %>% distinct %>%
+  right_join(coef, by='firstname') %>% arrange(race,gender,firstname) %>%
+  mutate(order=row_number())
+coef[,1:3]<- lapply(coef[, 1:3], as.factor)
+
+coef <- coef %>% mutate("Race and gender"=case_when(
+      race == "Black" & gender == "Female" ~ "Black, female",
+      race == "Black" & gender == "Male" ~ "Black, male",
+      race == "White" & gender == "Female" ~ "White, female",
+      race == "White" & gender == "Male" ~ "White, male"))
+
+plot_A3 <- ggplot(data = coef, 
+       aes(x = reorder(factor(firstname), order), y = Estimate, fill = `Race and gender`)) +
+  geom_bar(stat = 'identity', alpha = .3) + 
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) + 
+  labs(
+    x = "Applicant first name",
+    y = "Mean 30-day callback rate",
+    fill = "Race and gender"
+  ) +
+  geom_segment(aes(x = 1, y = coef(ols)['black'], xend = 38, yend = coef(ols)['black']),
+               show.legend = FALSE, color = "#F8766D") +
+  geom_segment(aes(x = 39, y = coef(ols)['white'], xend = 76, yend = coef(ols)['white']),
+               show.legend = FALSE, color = "#00BFCF")
+
+print(plot_A3, height = 5, width = 8)
+
+```
+This figure shows mean contact rates by applicant first name, organized by race and gender group. The horizontal bars show race group mean contact rates. F-tests and p-values come from joint tests of the hypothesis that contact rates are equal across names separately by race and gender group.
+
+
+```{r}
+ols2 <- felm(cb ~ factor(lastname) - 1 | 0 | 0 | job_id, data = df)
+
+coef <- as.data.frame(summary(ols2)$coefficients)
+coef <- coef %>% 
+  rownames_to_column(var = 'coef') %>%
+  extract(coef, "lastname", "\\(lastname\\)([A-Za-z]+)", remove = TRUE)
+
+coef <- df %>% 
+  select(race, lastname) %>% 
+  distinct() %>%
+  right_join(coef, by = "lastname") %>% 
+  arrange(race, lastname) %>%
+  mutate(order = row_number())
+
+plot_A4 <- ggplot(data = coef, 
+       aes(x = reorder(factor(lastname), order), y = Estimate, fill = factor(race))) +
+  geom_bar(stat = 'identity', alpha = .3) + 
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) + 
+  labs(
+    x = "Applicant last name",
+    y = "Mean 30-day callback rate",
+    fill = "Race"
+  ) +
+  geom_segment(aes(x = 1, y = coef(ols)['black'], xend = 26, yend = coef(ols)['black']),
+               show.legend = FALSE, color = "#F8766D") +
+  geom_segment(aes(x = 27, y = coef(ols)['white'], xend = 52, yend = coef(ols)['white']),
+               show.legend = FALSE, color = "#00BFCF")
+
+print(plot_A4, height = 5, width = 8)
+
+ggsave(plot_A4, filename = "output/plot_A4.png", height = 5, width = 8)
+```
+
+This figure shows mean contact rates by applicant last name, organized by race. The horizontal bars show race group mean contact rates. F-tests and p-values come from joint tests of the hypothesis that contact rates are equal across names separately by race.

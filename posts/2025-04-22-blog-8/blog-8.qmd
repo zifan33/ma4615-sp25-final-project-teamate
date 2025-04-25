@@ -1,0 +1,85 @@
+---
+title: "Blog 8: Progress So Far"
+description: |
+  Plans to wrap up the project.
+author: "TEAMATE"
+date: "2025-04-30"
+draft: FALSE
+---
+
+## Continuing exploratory data analysis
+![](plot_A4.png)
+
+
+This figure shows mean contact rates by applicant first name, organized by race group. The horizontal bars show race group mean contact rates. We can see that, on average, black names receive fewer 30-day callbacks than white names.
+
+
+### Additional Exhibits
+
+In addition to the figure above, we will also include a table that summarizes the data used in the analysis. This table will provide an overview of the key variables, allowing readers to better understand the context of the analysis.
+
+Also, we plan to include a regression table that summarizes the results of the regression analysis. This table will provide a more detailed look at the relationship between the variables and will help to support our conclusions.
+
+Finally, the visualization of the regression results will be included to provide a clear and concise representation of the findings. This visualization will help to highlight the key trends and patterns in the data, making it easier for readers to understand the implications of the analysis.
+
+
+## Thesis
+
+>Background: Taste-based discrimination is an economic model of labor market discrimination which argues that employers' prejudice or dislikes in an organisational culture rooted in prohibited grounds can have negative results in hiring minority workers, meaning that they can be said to have a taste for discrimination. 
+
+[Taste-based Discrimination](https://en.wikipedia.org/wiki/Taste-based_discrimination) in initial resume screening manifests in callback rates that vary systematically by race and gender of first names.
+By analyzing fictitious job applications in a randomized correspondence experiment, we can both verify and quantify these disparities.
+
+
+## Plan to polish visualizations and tables
+
+We plan to use `gtsummary` tool to output summary tables and `ggplot2` to create visualizations. The `gtsummary` package is a powerful tool for creating publication-ready summary tables in R, while `ggplot2` is a widely used package for creating high-quality visualizations.
+
+```{r}
+rm(list = ls())
+# hide warnings
+options(warn = -1)
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(stargazer))
+suppressPackageStartupMessages(library(readxl))
+suppressPackageStartupMessages(library(fixest))
+suppressPackageStartupMessages(library(usmap))
+suppressPackageStartupMessages(library(lfe))    
+suppressPackageStartupMessages(library(lmtest))
+suppressPackageStartupMessages(library(sandwich)) 
+suppressPackageStartupMessages(library(multiwayvcov))
+suppressPackageStartupMessages(library(here))
+suppressPackageStartupMessages(library(gtsummary))
+suppressPackageStartupMessages(library(htmltools))
+suppressPackageStartupMessages(library(broom))
+suppressPackageStartupMessages(library(stringr))
+
+data <- readRDS(here::here("dataset/cleaned_data.rds"))
+```
+
+## Summary Statistics Table
+```{r, echo=FALSE}
+data2 <- data %>%
+  filter(balanced >= 0) %>% 
+  mutate(
+    balanced_group = if_else(balanced >= 1, "Balanced", "All Firms"),
+    race = if_else(black == 1, "Black", "White"),
+    subgroup = paste(balanced_group, race, sep = " - ")
+  )
+
+tbl <- data2 %>%
+  tbl_summary(
+    by = subgroup,                  
+    include = c(cb, call_cb, email_cb, text_cb),  # select variables to summarize
+    missing = "ifany",                  # do not list missing data separately
+    statistic = list(all_continuous() ~ "{n} / {mean} / {sd} / {median}/ {p25}/ {p75}"),
+  ) %>% 
+  modify_header(
+    label = "**Variable**",
+    stat_by = "**N / Mean / SD**"
+  ) 
+
+tbl
+```

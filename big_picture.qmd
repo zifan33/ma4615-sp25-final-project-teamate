@@ -1,0 +1,153 @@
+---
+title: "Big Picture"
+description: "A 538/Upshot style article about the data."
+toc: true
+draft: FALSE
+filters:
+  - shinylive
+editor: 
+  markdown: 
+    wrap: sentence
+---
+
+
+
+>How much does your identity matter in landing an interview?
+
+Media coverage of this study by Kline, Rose, and Walters, 2022:\
+[New York Times](https://www.nytimes.com/2021/07/29/business/economy/hiring-racial-discrimination.html) \
+[Marketplace](https://www.marketplace.org/episode/2021/08/03/research-spotlights-existence-of-racial-discrimination-in-hiring-process) \
+[Here & Now](https://www.wbur.org/hereandnow/2021/08/18/name-discrimination-jobs) \
+[Youtube Channel: econimate](https://www.youtube.com/watch?v=fLgWIyx0gDw) \
+
+
+------------------------------------------------------------------------
+
+This comes from the file `big_picture.qmd`.
+
+In today’s competitive job market, a candidate’s name can be an unexpected gatekeeper.
+
+Resumes bearing names commonly associated with different racial or gender groups may receive different callback rates—even when qualifications are identical.
+
+That’s the hidden bias we set out to uncover.
+
+![](images/Sacred-Journey-MichaelReeder.png) \> Note: *Sacred Journey* by Michael Reeder: An Art Piece that represents the journey of self-discovery and identity.
+
+### Thesis
+
+>Background: Taste-based discrimination is an economic model of labor market discrimination which argues that employers' prejudice or dislikes in an organisational culture rooted in prohibited grounds can have negative results in hiring minority workers, meaning that they can be said to have a taste for discrimination. 
+
+[Taste-based Discrimination](https://en.wikipedia.org/wiki/Taste-based_discrimination) in initial resume screening manifests in callback rates that vary systematically by race and gender of first names.
+By analyzing fictitious job applications in a randomized correspondence experiment, we can both verify and quantify these disparities.
+
+### Why this matters
+
+-   **Fairness in hiring:** Early-stage screening should focus on qualifications, not perceived identity.\
+-   **Data-driven insight:** Large-scale resume studies provide rigorous evidence, moving the conversation beyond anecdotes.\
+-   **Actionable takeaways:** Organizations can monitor name-based disparities and design blind screening to reduce bias.
+
+### What we did on this page
+
+-   **Descriptive analysis:** Static charts show the overall spread of callback rates by race and gender groups.\
+-   **Interactive deep dive:** This page embeds a small Shiny dashboard, letting you explore the most common first names by subgroup and see which names yield higher callback rates.
+
+## Data 
+
+We used data from the study *"Systemic Discrimination Among Large U.S. Employers"* by Kline, Rose, and Walters (2022). The study examines discrimination in hiring practices through a large-scale correspondence experiment. Key aspects of the study include:
+
+- sending over 84,000 fictitious applications to over 100 Fortune 500 firms across multiple waves (including during the COVID pandemic).
+
+-   The data is used to measure systemic discrimination, a term defined by patterns or practices with a broad impact on an industry or geographic area, and to provide actionable intelligence for policy enforcement (e.g., EEOC investigations).
+
+This is an example of how a sample of resumes looks like:
+![](images/example-resume.png)
+
+> **Note:** sourced from Figure A1: Examples of applicant resumes in the Rose et al. (2022) paper.
+
+------------------------------------------------------------------------
+
+### Explore it yourself
+
+The interactive below lets you select any racial group and gender to view:
+
+-   A **word cloud** of the top first names in that subgroup.\
+-   A **table** of the top names ranked by callback rate.
+
+```{shinylive-r}
+#| eval: true
+#| standalone: true
+#| viewerHeight: 640
+# ```{shinylive-r} when ready to publish
+library(shiny)
+library(dplyr)
+library(readr)
+library(wordcloud2)
+library(stringdist)
+
+options("readr.edition" = 1) # keep this to ensure you can download the data
+data <- read_rds("https://sussmanbu.github.io/ma4615-sp25-final-project-teamate/dataset_for_shiny/cleaned_data.rds")
+
+
+# Define UI for app
+ui <- fluidPage(
+  titlePanel("Interactive Name Analysis Dashboard"),
+  sidebarLayout(
+    sidebarPanel(
+      h4("Word Cloud Settings"),
+      selectInput("race_wc", "Select Race:", choices = sort(unique(data$race)), selected = "White"),
+      selectInput("gender_wc", "Select Gender:", choices = sort(unique(data$gender)), selected = unique(data$gender)[1]),
+      br(),
+      h4("Top Names by Callback Rate"),
+      tableOutput("top_callbacks")
+    ),
+    mainPanel(
+      wordcloud2Output("name_wc", width = "100%", height = "600px")
+    )
+  )
+)
+
+# Define server logic required to draw --
+server <- function(input, output, session) {
+  filtered_wc <- reactive({
+    req(input$race_wc, input$gender_wc)
+    data %>% filter(race == input$race_wc, gender == input$gender_wc)
+  })
+
+  
+  output$name_wc <- renderWordcloud2({
+    df <- filtered_wc() %>%
+      count(firstname) %>%
+      arrange(desc(n)) %>%
+      head(100)
+    
+    set.seed(123)
+    wordcloud2(df, size = 1)
+  })
+
+
+  output$top_callbacks <- renderTable({
+    df <- filtered_wc() %>%
+      group_by(firstname) %>%
+      summarise(
+        callback_rate = mean(cb, na.rm = TRUE)#,
+        #count = n()
+      ) %>%
+      arrange(desc(callback_rate), 
+              #desc(count)
+              ) %>%
+      head(10)
+    df
+  }, rownames = FALSE)
+}
+
+# Create Shiny app ----
+shinyApp(ui = ui, server = server)
+```
+
+
+## Descriptive Evidence by Applicants First Name 
+![](output/plot_A4.png)
+
+This figure shows mean contact rates by applicant first name, organized by race group. The horizontal bars show race group mean contact rates. We can see that, on average, black names receive fewer 30-day callbacks than white names.
+
+------------------------------------------------------------------------

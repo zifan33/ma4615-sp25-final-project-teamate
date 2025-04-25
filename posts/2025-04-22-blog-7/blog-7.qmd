@@ -1,0 +1,103 @@
+---
+title: "Blog 7: Interactive Analysis"
+description: |
+  A self-contained Shiny app.
+author: "TEAMATE"
+date: "2025-04-22"
+draft: FALSE
+---
+
+Key objectives:
+
+- **High-level overview:** Understand the names of the fake resumes and their callback rates. 
+- **Interactive deep dive:** Allow users to explore naming patterns and callback rates by race and gender.
+
+```{r}
+# Clear workspace
+rm(list = ls())
+```
+
+### Interactive Dashboard
+Below is a self-contained Shiny app using **shinylive**.  
+
+**Instructions:**  
+- 🔹 *Self-contained:* All libraries and data loading happen within this chunk.  
+- 🔹 *Small data:* The RDS file is hosted on GitHub Pages for fast loading.  
+
+
+```{r}
+#| eval: true
+#| standalone: true
+#| viewerHeight: 640
+# ```{shinylive-r} when ready to publish
+library(shiny)
+library(dplyr)
+library(readr)
+library(wordcloud2)
+library(stringdist)
+
+options("readr.edition" = 1) # keep this to ensure you can download the data
+data <- read_rds("https://sussmanbu.github.io/ma4615-sp25-final-project-teamate/dataset_for_shiny/cleaned_data.rds")
+
+
+# Define UI for app
+ui <- fluidPage(
+  titlePanel("Interactive Name Analysis Dashboard"),
+  sidebarLayout(
+    sidebarPanel(
+      h4("Word Cloud Settings"),
+      selectInput("race_wc", "Select Race:", choices = sort(unique(data$race)), selected = "White"),
+      selectInput("gender_wc", "Select Gender:", choices = sort(unique(data$gender)), selected = unique(data$gender)[1])
+    ),
+    mainPanel(
+      wordcloud2Output("name_wc", width = "100%", height = "600px"),
+      br(),
+      h4("Top Names by Callback Rate"),
+      tableOutput("top_callbacks")
+    )
+  )
+)
+
+# Define server logic required to draw --
+server <- function(input, output, session) {
+  filtered_wc <- reactive({
+    req(input$race_wc, input$gender_wc)
+    data %>% filter(race == input$race_wc, gender == input$gender_wc)
+  })
+
+  
+  output$name_wc <- renderWordcloud2({
+    df <- filtered_wc() %>%
+      count(firstname) %>%
+      arrange(desc(n)) %>%
+      head(100)
+    wordcloud2(df, size = 1)
+  })
+
+
+  output$top_callbacks <- renderTable({
+    df <- filtered_wc() %>%
+      group_by(firstname) %>%
+      summarise(
+        callback_rate = mean(cb, na.rm = TRUE),
+        count = n()
+      ) %>%
+      arrange(desc(callback_rate), desc(count)) %>%
+      head(10)
+    df
+  }, rownames = FALSE)
+}
+
+# Create Shiny app ----
+shinyApp(ui = ui, server = server)
+```
+
+**Deployment tips:**  
+1. Confirm this chunk runs locally as a standard R chunk.  
+2. Place the RDS file in your `scripts/` folder and push to GitHub.  
+3. Update the `read_rds()` URL to point to your published `scripts/` location.  
+4. Change the chunk engine to `shinylive-r` and re-render the site.  
+5. Adjust `viewerHeight` as needed to fit your page layout.  
+
+This interactive component complements the static analysis by letting readers examine names and callback patterns directly by subgroup.  
+

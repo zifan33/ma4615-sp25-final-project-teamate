@@ -1,0 +1,39 @@
+---
+title: "Blog 1: Data Progress"
+description:  |
+  Description of datasets found.
+author: "TEAMATE"
+date: "2025-02-24"
+draft: FALSE
+---
+
+
+**Data #1:**
+URL: https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/HLO4XC
+
+The data comes from Kline, Patrick, Evan K. Rose, and Christopher
+R. Walters, "Systemic Discrimination Among Large U.S. Employers,"
+The Quarterly Journal of Economics, vol. 137 no. 4, (2022),
+1963-2036.https://doi.org/10.1093/qje/qjac024. This dataset, published
+alongside the article by Kline, Rose, and Walters (2022), examines potential
+systemic hiring discrimination by large U.S. employers. The data primarily
+cover hiring outcomes, employer characteristics, and applicant demographic
+details spanning several years. Data is originally collected by authors. They
+conducted a randomized control trail (RCT) to identify patterns of potential
+discrimination, estimating the magnitude of these effects, and understanding
+whether certain employer or regional characteristics are associated with
+differential outcomes.
+
+**Data #2:**
+URL: https://opportunityinsights.org/data/
+
+The dataset described in College-Level Data for 139 Selective American Colleges provides insights into college application and attendance patterns among U.S. students based on parental income. Compiled by linking standardized test-takers (SAT or ACT from 2011, 2013, or 2015) to tax data, this dataset categorizes students into income bins to analyze disparities in college access. It covers 139 selective colleges, including Ivy-Plus institutions, elite private colleges, and flagship public universities. The dataset includes key metrics such as relative application rates, attendance rates, and conditional attendance rates, allowing researchers to examine how income influences higher education opportunities.
+
+A challenge in working with this dataset is its reliance on estimated values, as noise has been added for privacy reasons, potentially affecting precision. Additionally, while the dataset is rich in application and attendance statistics, it does not include direct measures of student academic performance beyond standardized test scores, limiting deeper analysis of post-admission outcomes. 
+
+**Data #3** 
+URL: https://www.samhsa.gov/data/data-we-collect/teds-treatment-episode-data-set/datafiles 
+The Treatment Episode Data Set (TEDS), available through the SAMHSA website (TEDS Data Files), provides comprehensive data on individuals entering substance abuse treatment programs across the U.S. It includes over 2 million treatment episodes, with rows representing individual treatment episodes and columns covering demographics, substance use types, treatment modalities, and outcomes. The data is collected through state-administered systems in federally-funded treatment centers, aiming to monitor patterns of substance use, treatment needs, and outcomes. This standardized collection allows for detailed analysis of treatment trends across different regions and populations.
+
+While the dataset is available in multiple formats such as SAS, SPSS, and ASCII, loading and cleaning the data may require addressing missing values, ensuring proper data type conversion, and standardizing categories. A few key questions that can be explored include how treatment outcomes vary by demographics and how substance abuse trends differ across states and over time. Challenges may include the large size of the dataset, handling missing data, and ensuring confidentiality with sensitive information.
+
