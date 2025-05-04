@@ -1,2 +1,56 @@
-[![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/Qh0zoAkq)
-# ma4615-final-project-quarto
+# MA [46]15 Data Science in R – Final Project (Spring 2025)
+
+**Course:** MA [46]15 Data Science with R  
+**Instructor:** Prof. Daniel Sussman (Mathematics & Statistics, Boston University)  
+**Term:** Spring 2025
+
+This repository/[website](https://zifan33.github.io/ma4615-sp25-final-project-teamate/about.html) contains the final project for MA [46]15 Data Science in R. 
+---
+
+## Project Structure
+
+- **About**  
+  Overview of the course, team members, and project goals.
+
+- **Big Picture**  
+  Motivation, background research, and a high‑level summary of our findings.
+
+- **Data**  
+  Description of data sources, collection methods, and preprocessing steps.
+
+- **Analysis**  
+  Detailed R notebooks, visualizations, and statistical models.
+
+---
+
+## Team Members
+
+- **Zifan Huang**  
+  Senior, Economics  
+  GitHub: [github.com/zifan33](https://github.com/zifan33)
+
+- **Rheona Mehta**  
+  Junior, Economics & Data Science  
+  GitHub: [github.com/rhemehta](https://github.com/rhemehta)
+
+- **Catherine Liu**  
+  Junior, Computer Science & Mathematics  
+  GitHub: [github.com/catherinel04](https://github.com/catherinel04)
+
+- **Aron Diamond**  
+  Master’s, Bioinformatics  
+  GitHub: [github.com/adiama0](https://github.com/adiama0)
+
+- **Xiangfu Meng**  
+  Senior, Biology & Statistics  
+  GitHub: [github.com/ollyllo](https://github.com/ollyllo)
+
+---
+
+## Acknowledgements
+
+We gratefully acknowledge Professor Daniel Sussman and Teaching Fellow Aislinn Sullivan for their guidance and support throughout the course. Thanks also to our classmates for valuable feedback. This project template was adapted from the standard Quarto website template (RStudio 2023.09.0).
+
+---
+
+*This site was built with [Quarto](https://quarto.org) and is hosted via GitHub Pages.*```
