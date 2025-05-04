@@ -26,23 +26,18 @@ This repository/[website](https://zifan33.github.io/ma4615-sp25-final-project-te
 ## Team Members
 
 - **Zifan Huang**  
-  Senior, Economics  
   GitHub: [github.com/zifan33](https://github.com/zifan33)
 
 - **Rheona Mehta**  
-  Junior, Economics & Data Science  
   GitHub: [github.com/rhemehta](https://github.com/rhemehta)
 
 - **Catherine Liu**  
-  Junior, Computer Science & Mathematics  
   GitHub: [github.com/catherinel04](https://github.com/catherinel04)
 
 - **Aron Diamond**  
-  Master’s, Bioinformatics  
   GitHub: [github.com/adiama0](https://github.com/adiama0)
 
 - **Xiangfu Meng**  
-  Senior, Biology & Statistics  
   GitHub: [github.com/ollyllo](https://github.com/ollyllo)
 
 ---
